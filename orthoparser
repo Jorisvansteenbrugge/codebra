@@ -1,16 +1,41 @@
 #!/usr/bin/env python
 
-from sys import argv
+import sys
+from Bio import SeqIO
+from glob import glob
+#OG0079777: CRO_T033658|m.42398
 
-
-def getGroups(input_file):
+def getGroupRecords(input_file):
+    groups = {}
     with open(input_file) as in_file:
         for line in in_file:
+            line = line.strip().split(":")
+            groups[line[0]] = line[1].split()
+    return groups
+
+def getKnownGenes(gene_file):
+    with open(gene_file) as genes:
+        return [x.strip() for x in genes]
 
 
-def getSeqs
+def filterFasta(fasta_file):
+    handle = ""
+
+def searchGroups(groups, fasta_files, knownGene):
+    for key,values in groups.items():
+        for fasta in fasta_files:
+            for record SeqIO.parse(open(fasta), "fasta")
+                for
 
 if __name__ == "__main__":
-    if len(argv) == 1:
-        print("usage: <input>")
+    if len(sys.argv) == 1:
+        print("usage: <orthogroups.txt>  <knowngenes.txt> <fastadir/>")
+        sys.exit()
+
+    fasta_files = glob(sys.argv[3]+"*.fa*")
+    print(fasta_files)
+
+    knownGenes = getKnownGenes(sys.argv[2])
+    print getGroupRecords(sys.argv[1])
+
 
