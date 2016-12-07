@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+from sys import argv
+
+
+def getGroups(input_file):
+    with open(input_file) as in_file:
+        for line in in_file:
+
+
+def getSeqs
+
+if __name__ == "__main__":
+    if len(argv) == 1:
+        print("usage: <input>")
+
