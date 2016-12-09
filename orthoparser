@@ -3,39 +3,61 @@
 import sys
 from Bio import SeqIO
 from glob import glob
-#OG0079777: CRO_T033658|m.42398
+import subprocess
 
 def getGroupRecords(input_file):
     groups = {}
+    ids = {}
     with open(input_file) as in_file:
         for line in in_file:
-            line = line.strip().split(":")
-            groups[line[0]] = line[1].split()
-    return groups
+            try:
+                line = line.strip().split(":")
+                groups[line[0]] = line[1].split()
+                for val in line[1].split():
+                    ids[val] = line[0]
+            except:
+                pass
+    return groups,ids
 
 def getKnownGenes(gene_file):
     with open(gene_file) as genes:
         return [x.strip() for x in genes]
 
 
-def filterFasta(fasta_file):
-    handle = ""
 
-def searchGroups(groups, fasta_files, knownGene):
-    for key,values in groups.items():
-        for fasta in fasta_files:
-            for record SeqIO.parse(open(fasta), "fasta")
-                for
+def getFasta(fastaList, header):
+    for fasta in fastaList:
+        for record in SeqIO.parse(open(fasta),"fasta"):
+            if header in record.id:
+                return ">{}\n{}\n".format(record.id, record.seq)
+
+def doGrep(fastaList, gene):
+    cmd = "cat {} | grep \">\" | grep {}".format(" ".join(fastaList), gene)
+    output = subprocess.Popen(cmd,shell=True, stdout=subprocess.PIPE)
+    for line in output.stdout:
+        yield line
+    
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        print("usage: <orthogroups.txt>  <knowngenes.txt> <fastadir/>")
+    if len(sys.argv) != 5:
+        print("usage: <orthogroups.txt> <knowngenes.txt> <fastadir/> <outdir/>")
         sys.exit()
 
     fasta_files = glob(sys.argv[3]+"*.fa*")
-    print(fasta_files)
+
+
 
     knownGenes = getKnownGenes(sys.argv[2])
-    print getGroupRecords(sys.argv[1])
+    groups, ids =  getGroupRecords(sys.argv[1])
+
+    for matches in  [doGrep(fasta_files, gene) for gene in knownGenes]:
+        for id in matches:
+            id = id.strip().split(" ")[0][1:]
+            group = ids[id]
+            with open(sys.argv[4]+group+".fa", "a") as out_file:
+                for x in groups[group]:
+                    out_file.write(getFasta(fasta_files, x))
+             
+    
 
 
