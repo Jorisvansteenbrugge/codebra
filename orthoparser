@@ -6,6 +6,19 @@ from glob import glob
 import subprocess
 
 def getGroupRecords(input_file):
+    """Parsed the orthofinder result file
+
+        Keyword Arguments:
+		    input_file -- Input file is the orthogroups file (result from orthofinder). 
+        Returns:
+            groups --  The orthogroup ID is put in groups as key, the values of the groups are the fasta entries that are placed in that group, which is a protein sequence.
+                        {orthogroupID:[fastaID1, fastaID2]}
+            ids -- The second dictionary created (ids), where the fasta entry is the key and the value is the orthogroup ID.
+                        {fastaID: orthogroupID}
+
+    The ids dictionary is used to retrieve the group id from the entries that were found to be mia pathway genes
+    The groups dictionary is then used to retrieve all sequences in the found orthogroup.
+    """
     groups = {}
     ids = {}
     with open(input_file) as in_file:
@@ -20,18 +33,37 @@ def getGroupRecords(input_file):
     return groups,ids
 
 def getKnownGenes(gene_file):
+    """Parses the knowngene file and returns its contents as a list."""
     with open(gene_file) as genes:
         return [x.strip() for x in genes]
 
 
 
 def getFasta(fastaList, header):
+    """Extracts fasta sequences from all fasta files based on fastaID
+        Keyword Arguments:
+            fastaList -- A list of file locations of protein fasta files
+            header -- ID that needs to be filtered out
+
+        Returns the ID record, and underneath the sequence of that record.
+    """ 
     for fasta in fastaList:
         for record in SeqIO.parse(open(fasta),"fasta"):
             if header in record.id:
                 return ">{}\n{}\n".format(record.id, record.seq)
 
 def doGrep(fastaList, gene):
+    """Searches for a known pathway gene in all fasta file. 
+        
+        Keyword Arguments:
+            fastaList -- A list of file locations of protein fasta files
+            gene -- The name of the known pathway gene
+        Yields:
+            line -- The fasta header of a match
+
+    Calls a command line grep search to find the pathway gene name in all fasta headers.
+    Matches are piped back into python and returned.
+ """
     cmd = "cat {} | grep \">\" | grep {}".format(" ".join(fastaList), gene)
     output = subprocess.Popen(cmd,shell=True, stdout=subprocess.PIPE)
     for line in output.stdout:
@@ -43,21 +75,137 @@ if __name__ == "__main__":
         print("usage: <orthogroups.txt> <knowngenes.txt> <fastadir/> <outdir/>")
         sys.exit()
 
+    #finds all fasta files in the fasta directory using the glob package
     fasta_files = glob(sys.argv[3]+"*.fa*")
 
-
-
+    #File containing known pathway genes 
     knownGenes = getKnownGenes(sys.argv[2])
+
+    #Parse the orthogroup output file
     groups, ids =  getGroupRecords(sys.argv[1])
 
+    #if doGrep finds a known pathway gene, loop over those fastaIDs
     for matches in  [doGrep(fasta_files, gene) for gene in knownGenes]:
+        
+        #There can be multiple matches for 1 pathway gene, so loop over all possibilities
         for id in matches:
+            #Filter out only the fastaID instead of the whole line(like skipping '>' etc.)
             id = id.strip().split(" ")[0][1:]
+            #finds the orthoGroup id based on the fastaID
             group = ids[id]
+
+            #Open the output file for writing
             with open(sys.argv[4]+group+".fa", "a") as out_file:
+                #We have the group ID so we can retrieve all fastaIDs in that orthoGroup
+                #of which we want to filter out the protein sequences 
                 for x in groups[group]:
                     out_file.write(getFasta(fasta_files, x))
-             
+         
+
+
+
+
+import sys
+from Bio import SeqIO
+from glob import glob
+import subprocess
+
+def getGroupRecords(input_file):
+    """Parsed the orthofinder result file
+
+        Keyword Arguments:
+		    input_file -- Input file is the orthogroups file (result from orthofinder). 
+        Returns:
+            groups --  The orthogroup ID is put in groups as key, the values of the groups are the fasta entries that are placed in that group, which is a protein sequence.
+                        {orthogroupID:[fastaID1, fastaID2]}
+            ids -- The second dictionary created (ids), where the fasta entry is the key and the value is the orthogroup ID.
+                        {fastaID: orthogroupID}
+
+    The ids dictionary is used to retrieve the group id from the entries that were found to be mia pathway genes
+    The groups dictionary is then used to retrieve all sequences in the found orthogroup.
+    """
+    groups = {}
+    ids = {}
+    with open(input_file) as in_file:
+        for line in in_file:
+            try:
+                line = line.strip().split(":")
+                groups[line[0]] = line[1].split()
+                for val in line[1].split():
+                    ids[val] = line[0]
+            except:
+                pass
+    return groups,ids
+
+def getKnownGenes(gene_file):
+    """Parses the knowngene file and returns its contents as a list."""
+    with open(gene_file) as genes:
+        return [x.strip() for x in genes]
+
+
+
+def getFasta(fastaList, header):
+    """Extracts fasta sequences from all fasta files based on fastaID
+        Keyword Arguments:
+            fastaList -- A list of file locations of protein fasta files
+            header -- ID that needs to be filtered out
+
+        Returns the ID record, and underneath the sequence of that record.
+    """ 
+    for fasta in fastaList:
+        for record in SeqIO.parse(open(fasta),"fasta"):
+            if header in record.id:
+                return ">{}\n{}\n".format(record.id, record.seq)
+
+def doGrep(fastaList, gene):
+    """Searches for a known pathway gene in all fasta file. 
+        
+        Keyword Arguments:
+            fastaList -- A list of file locations of protein fasta files
+            gene -- The name of the known pathway gene
+        Yields:
+            line -- The fasta header of a match
+
+    Calls a command line grep search to find the pathway gene name in all fasta headers.
+    Matches are piped back into python and returned.
+ """
+    cmd = "cat {} | grep \">\" | grep {}".format(" ".join(fastaList), gene)
+    output = subprocess.Popen(cmd,shell=True, stdout=subprocess.PIPE)
+    for line in output.stdout:
+        yield line
     
+
+if __name__ == "__main__":
+    if len(sys.argv) != 5:
+        print("usage: <orthogroups.txt> <knowngenes.txt> <fastadir/> <outdir/>")
+        sys.exit()
+
+    #finds all fasta files in the fasta directory using the glob package
+    fasta_files = glob(sys.argv[3]+"*.fa*")
+
+    #File containing known pathway genes 
+    knownGenes = getKnownGenes(sys.argv[2])
+
+    #Parse the orthogroup output file
+    groups, ids =  getGroupRecords(sys.argv[1])
+
+    #if doGrep finds a known pathway gene, loop over those fastaIDs
+    for matches in  [doGrep(fasta_files, gene) for gene in knownGenes]:
+        
+        #There can be multiple matches for 1 pathway gene, so loop over all possibilities
+        for id in matches:
+            #Filter out only the fastaID instead of the whole line(like skipping '>' etc.)
+            id = id.strip().split(" ")[0][1:]
+            #finds the orthoGroup id based on the fastaID
+            group = ids[id]
+
+            #Open the output file for writing
+            with open(sys.argv[4]+group+".fa", "a") as out_file:
+                #We have the group ID so we can retrieve all fastaIDs in that orthoGroup
+                #of which we want to filter out the protein sequences 
+                for x in groups[group]:
+                    out_file.write(getFasta(fasta_files, x))
+         
+
 
 
