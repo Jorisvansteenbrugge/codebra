@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
+__author__ = "Eva/Joris"
 from sys import argv
-
+ 
 def parse_blatoutput(output_psl):
     for i in range(5):
         output_psl.readline()
