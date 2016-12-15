@@ -21,7 +21,7 @@ def parse_blatoutput(output_psl):
 
 if __name__ == "__main__":
     if len(argv) == 1:
-        print("Usage: psil2bed <input.psl> <output.bed>")
+        print("Usage: psl2bed <input.psl> <output.bed>")
     output_psl = open(argv[1], 'r')
     bed_entries = list(parse_blatoutput(open(argv[1], 'r')))
 
