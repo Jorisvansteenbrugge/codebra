@@ -1,9 +1,19 @@
 #!/usr/bin/env python
 
 __author__ = "Eva/Joris"
+
 from sys import argv
+from sys import exit
  
 def parse_blatoutput(output_psl):
+    """Convert psl formatted line to bed12 format
+    
+        Keyword Arguments:
+            output_psl -- Open file object containing psl formatted lines
+
+        Yields:
+            bed formatted output lines
+    """
     for i in range(5):
         output_psl.readline()
     for line in output_psl:
@@ -20,18 +30,24 @@ def parse_blatoutput(output_psl):
 
 
 if __name__ == "__main__":
-    if len(argv) == 1:
+    #Check if the right amount of arguments is used
+    if len(argv) == 1 or len(argv) > 3:
         print("Usage: psl2bed <input.psl> <output.bed>")
+        exit(1)
+
     output_psl = open(argv[1], 'r')
     bed_entries = list(parse_blatoutput(open(argv[1], 'r')))
 
     if len(bed_entries) > 1:
+        #multiple bed matches can be found
+        # the code below picks the most likely one
         bed_entries = sorted(bed_entries, key=lambda line: line[2] - line[1])
 
         longest_len = bed_entries[-1][2] - bed_entries[-2][1]
         alLongest_len = bed_entries[-1][2] - bed_entries[-2][1]
 
-
+        #the second longest should be within 80% length of the
+        # largest one
         if alLongest_len >= (longest_len * 80)/100:
             longest_mismatch = bed_entries[-1][13]
             longest_match = bed_entries[-1][12]
